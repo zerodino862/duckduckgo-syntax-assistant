@@ -1,0 +1,1469 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DuckDuckGo Syntax Assistant</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        ddg: {
+                            orange: '#DE5833',
+                            hover: '#C24825',
+                            darkBg: '#12151E',
+                            cardDark: '#1E2330',
+                            cardBorder: '#2E3547',
+                            accent: '#3B82F6',
+                            teal: '#10B981'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'Fira Code', 'monospace']
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        code, pre, .font-mono { font-family: 'JetBrains Mono', monospace; }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.1); }
+        ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.15); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.25); }
+        .selected-nav-item { border-left: 3px solid #DE5833; background-color: rgba(222, 88, 51, 0.08); }
+        @keyframes pulse-light {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .animate-pulse-light { animation: pulse-light 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+    </style>
+</head>
+<body class="bg-[#0F1219] text-gray-100 min-h-screen flex flex-col selection:bg-ddg-orange selection:text-white">
+
+    <!-- Top Navigation Header -->
+    <header class="border-b border-ddg-cardBorder bg-[#161B26]/90 backdrop-blur sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-3 cursor-pointer" onclick="switchTab('assistant')">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-ddg-orange to-red-600 flex items-center justify-center text-white shadow-lg shadow-ddg-orange/20 font-bold text-xl">
+                    <i class="fa-solid font-bold text-lg"><span style="font-style: normal;">🦆</span></i>
+                </div>
+                <div>
+                    <div class="flex items-center space-x-2">
+                        <span class="font-bold text-lg tracking-tight text-white">DuckDuckGo</span>
+                        <span class="text-xs bg-ddg-orange/20 text-ddg-orange px-2 py-0.5 rounded-full font-semibold border border-ddg-orange/30">Syntax Assistant</span>
+                    </div>
+                    <p class="text-xs text-gray-400 hidden sm:block">Contextual Query Optimization & Workflow Engine</p>
+                </div>
+            </div>
+
+            <!-- Navigation Tabs -->
+            <nav class="flex items-center space-x-1 sm:space-x-2">
+                <button id="tab-assistant" onclick="switchTab('assistant')" class="px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center space-x-1.5 bg-ddg-orange text-white">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i>
+                    <span>Live Assistant</span>
+                </button>
+                <button id="tab-builder" onclick="switchTab('builder')" class="px-3 py-2 rounded-lg text-sm font-medium text-gray-300 hover:text-white hover:bg-ddg-cardDark transition-colors flex items-center space-x-1.5">
+                    <i class="fa-solid fa-sliders"></i>
+                    <span class="hidden sm:inline">Query Builder</span>
+                </button>
+                <button id="tab-curriculum" onclick="switchTab('curriculum')" class="px-3 py-2 rounded-lg text-sm font-medium text-gray-300 hover:text-white hover:bg-ddg-cardDark transition-colors flex items-center space-x-1.5">
+                    <i class="fa-solid fa-book-bookmark"></i>
+                    <span class="hidden sm:inline">Rules & Reference</span>
+                </button>
+                <button onclick="toggleKeyboardHelp()" title="Keyboard Shortcuts (?)" class="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-ddg-cardDark border border-ddg-cardBorder transition-colors ml-2">
+                    <i class="fa-solid fa-keyboard"></i>
+                </button>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Floating Keyboard Shortcut Indicator Bar -->
+    <div id="shortcut-hud" class="bg-[#1A202C]/90 backdrop-blur border-b border-ddg-cardBorder px-4 py-1.5 text-xs text-gray-300 flex items-center justify-between">
+        <div class="max-w-7xl mx-auto w-full flex items-center justify-between">
+            <div class="flex items-center space-x-4 overflow-x-auto py-1 no-scrollbar">
+                <span class="text-gray-400 font-medium uppercase text-[10px] tracking-wider"><i class="fa-solid fa-bolt text-ddg-orange mr-1"></i> Shortcuts:</span>
+                <span class="whitespace-nowrap"><kbd class="bg-gray-800 border border-gray-700 px-1.5 py-0.5 rounded text-ddg-orange font-mono text-[11px]">/</kbd> Focus Search</span>
+                <span class="whitespace-nowrap"><kbd class="bg-gray-800 border border-gray-700 px-1.5 py-0.5 rounded text-ddg-orange font-mono text-[11px]">J</kbd> / <kbd class="bg-gray-800 border border-gray-700 px-1.5 py-0.5 rounded text-ddg-orange font-mono text-[11px]">K</kbd> Nav Suggestions</span>
+                <span class="whitespace-nowrap"><kbd class="bg-gray-800 border border-gray-700 px-1.5 py-0.5 rounded text-ddg-orange font-mono text-[11px]">D</kbd> Add site: Domain Filter</span>
+                <span class="whitespace-nowrap"><kbd class="bg-gray-800 border border-gray-700 px-1.5 py-0.5 rounded text-ddg-orange font-mono text-[11px]">M</kbd> Main Tab</span>
+                <span class="whitespace-nowrap"><kbd class="bg-gray-800 border border-gray-700 px-1.5 py-0.5 rounded text-ddg-orange font-mono text-[11px]">T</kbd> Scroll Top</span>
+            </div>
+            <div class="hidden md:flex items-center space-x-2 text-gray-400">
+                <span id="active-key-badge" class="hidden bg-ddg-orange/20 text-ddg-orange border border-ddg-orange/30 px-2 py-0.5 rounded text-[11px] font-mono">Key Pressed: <span id="last-key">-</span></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification Container -->
+    <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col space-y-2 pointer-events-none"></div>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+
+        <!-- ==================== VIEW 1: LIVE ASSISTANT ==================== -->
+        <div id="view-assistant" class="space-y-6">
+            
+            <!-- Contextual Search Section -->
+            <div class="bg-ddg-cardDark rounded-2xl border border-ddg-cardBorder p-6 shadow-xl relative overflow-hidden">
+                <div class="absolute -top-24 -right-24 w-60 h-60 bg-ddg-orange/10 rounded-full blur-3xl pointer-events-none"></div>
+
+                <div class="mb-4">
+                    <label for="search-input" class="block text-sm font-medium text-gray-300 mb-2 flex items-center justify-between">
+                        <span><i class="fa-solid fa-magnifying-glass text-ddg-orange mr-2"></i>Contextual Search Input Bar</span>
+                        <span class="text-xs text-gray-400">Press <kbd class="bg-gray-800 border border-gray-700 px-1 py-0.5 rounded font-mono text-gray-300">/</kbd> to edit</span>
+                    </label>
+                    <div class="relative flex items-center">
+                        <input id="search-input" type="text" 
+                            placeholder="Type a query, e.g. 'python pdf cheat sheet', '!mdn flexbox', 'password 16', or 'timer 5m'..." 
+                            class="w-full bg-[#12151E] text-white placeholder-gray-500 rounded-xl px-5 py-4 pl-12 pr-32 border border-ddg-cardBorder focus:outline-none focus:border-ddg-orange focus:ring-1 focus:ring-ddg-orange transition-all font-mono text-sm md:text-base shadow-inner"
+                            oninput="handleSearchInput()"
+                            onkeydown="handleSearchKeyDown(event)"
+                            autocomplete="off" spellcheck="false" autofocus>
+                        <i class="fa-solid fa-search absolute left-4 text-gray-500 text-lg"></i>
+                        <div class="absolute right-3 flex items-center space-x-2">
+                            <button onclick="clearSearch()" id="clear-btn" class="hidden text-gray-400 hover:text-white p-1.5 rounded-lg hover:bg-gray-800 transition-colors">
+                                <i class="fa-solid fa-xmark"></i>
+                            </button>
+                            <button onclick="executeDDGSearch()" class="bg-ddg-orange hover:bg-ddg-hover text-white px-3.5 py-2 rounded-lg text-xs font-semibold transition-all shadow-md flex items-center space-x-1.5">
+                                <span>Search</span>
+                                <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Query Quick Analysis Pill Indicators -->
+                <div id="query-analysis-tags" class="flex flex-wrap gap-2 text-xs text-gray-400 pt-1">
+                    <span class="text-gray-500">Live Detectors:</span>
+                    <span id="tag-quote" class="px-2 py-0.5 rounded-md bg-gray-800/60 border border-gray-700/50 text-gray-500">Exact Phrase</span>
+                    <span id="tag-boolean" class="px-2 py-0.5 rounded-md bg-gray-800/60 border border-gray-700/50 text-gray-500">Boolean Logic</span>
+                    <span id="tag-filter" class="px-2 py-0.5 rounded-md bg-gray-800/60 border border-gray-700/50 text-gray-500">File/Site Filter</span>
+                    <span id="tag-bang" class="px-2 py-0.5 rounded-md bg-gray-800/60 border border-gray-700/50 text-gray-500">!Bang Shortcut</span>
+                    <span id="tag-utility" class="px-2 py-0.5 rounded-md bg-gray-800/60 border border-gray-700/50 text-gray-500">Utility Command</span>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                
+                <!-- Left Column: Contextual Peripheral Suggestions (2 cols on large) -->
+                <div class="lg:col-span-2 space-y-6">
+                    
+                    <!-- Dynamic Utility Instant Answer Card Container (If triggered) -->
+                    <div id="utility-card-container" class="hidden"></div>
+
+                    <!-- Contextual Peripheral Syntax Suggestions Panel -->
+                    <div class="bg-ddg-cardDark rounded-2xl border border-ddg-cardBorder p-6 shadow-xl">
+                        <div class="flex items-center justify-between mb-4">
+                            <h2 class="text-lg font-bold text-white flex items-center space-x-2">
+                                <i class="fa-solid fa-lightbulb text-amber-400"></i>
+                                <span>Peripheral Syntax Suggestions & Corrections</span>
+                            </h2>
+                            <span id="suggestion-count" class="text-xs bg-gray-800 text-gray-300 px-2.5 py-1 rounded-full border border-gray-700">0 suggestions</span>
+                        </div>
+
+                        <!-- Instruction text when empty -->
+                        <div id="empty-suggestions-notice" class="text-center py-10 px-4 border-2 border-dashed border-gray-800 rounded-xl">
+                            <i class="fa-solid fa-terminal text-3xl text-gray-600 mb-3 block"></i>
+                            <p class="text-gray-300 font-medium">Type a search term above to analyze syntax contextually</p>
+                            <p class="text-xs text-gray-500 mt-1 max-w-md mx-auto">Try typing broad topics, file formats, lower-case booleans (e.g., <code class="text-ddg-orange">react or vue</code>), or destination triggers like <code class="text-ddg-orange">amazon</code> or <code class="text-ddg-orange">mdn</code>.</p>
+                            
+                            <!-- Quick Test Preset Buttons -->
+                            <div class="mt-4 flex flex-wrap gap-2 justify-center">
+                                <span class="text-xs text-gray-400 flex items-center mr-1">Sample queries:</span>
+                                <button onclick="setSampleQuery('python cheat sheet pdf')" class="text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 px-2.5 py-1 rounded-lg border border-gray-700 transition-colors font-mono">python cheat sheet pdf</button>
+                                <button onclick="setSampleQuery('machine learning or deep learning')" class="text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 px-2.5 py-1 rounded-lg border border-gray-700 transition-colors font-mono">machine learning or deep learning</button>
+                                <button onclick="setSampleQuery('!mdn flexbox gap')" class="text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 px-2.5 py-1 rounded-lg border border-gray-700 transition-colors font-mono">!mdn flexbox gap</button>
+                                <button onclick="setSampleQuery('password 16')" class="text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 px-2.5 py-1 rounded-lg border border-gray-700 transition-colors font-mono">password 16</button>
+                            </div>
+                        </div>
+
+                        <!-- Active Suggestions List -->
+                        <div id="suggestions-list" class="space-y-3"></div>
+                    </div>
+
+                    <!-- Operator Sandbox / Direct Syntax Injector -->
+                    <div class="bg-ddg-cardDark rounded-2xl border border-ddg-cardBorder p-6 shadow-xl">
+                        <h3 class="text-md font-bold text-white mb-3 flex items-center space-x-2">
+                            <i class="fa-solid fa-puzzle-piece text-ddg-teal"></i>
+                            <span>Quick Syntax Injectors</span>
+                        </h3>
+                        <p class="text-xs text-gray-400 mb-4">Click any operator chip below to instantly inject or append it into your active search query.</p>
+                        
+                        <div class="space-y-3">
+                            <div>
+                                <span class="text-xs text-gray-400 block mb-1 font-semibold uppercase tracking-wider">Target Filters & Placement</span>
+                                <div class="flex flex-wrap gap-2">
+                                    <button onclick="injectSyntax('site:', 'github.com')" class="px-2.5 py-1.5 rounded-lg bg-[#12151E] hover:bg-gray-800 border border-ddg-cardBorder text-xs text-ddg-orange font-mono transition-colors">+ site:github.com</button>
+                                    <button onclick="injectSyntax('filetype:', 'pdf')" class="px-2.5 py-1.5 rounded-lg bg-[#12151E] hover:bg-gray-800 border border-ddg-cardBorder text-xs text-ddg-teal font-mono transition-colors">+ filetype:pdf</button>
+                                    <button onclick="injectSyntax('intitle:', 'guide')" class="px-2.5 py-1.5 rounded-lg bg-[#12151E] hover:bg-gray-800 border border-ddg-cardBorder text-xs text-blue-400 font-mono transition-colors">+ intitle:guide</button>
+                                    <button onclick="injectSyntax('inurl:', 'docs')" class="px-2.5 py-1.5 rounded-lg bg-[#12151E] hover:bg-gray-800 border border-ddg-cardBorder text-xs text-purple-400 font-mono transition-colors">+ inurl:docs</button>
+                                    <button onclick="injectSyntax('inbody:', 'tutorial')" class="px-2.5 py-1.5 rounded-lg bg-[#12151E] hover:bg-gray-800 border border-ddg-cardBorder text-xs text-pink-400 font-mono transition-colors">+ inbody:tutorial</button>
+                                </div>
+                            </div>
+
+                            <div>
+                                <span class="text-xs text-gray-400 block mb-1 font-semibold uppercase tracking-wider">Boolean Operators</span>
+                                <div class="flex flex-wrap gap-2">
+                                    <button onclick="injectSyntax('AND', '')" class="px-2.5 py-1.5 rounded-lg bg-[#12151E] hover:bg-gray-800 border border-ddg-cardBorder text-xs text-amber-400 font-mono font-bold transition-colors">AND</button>
+                                    <button onclick="injectSyntax('OR', '')" class="px-2.5 py-1.5 rounded-lg bg-[#12151E] hover:bg-gray-800 border border-ddg-cardBorder text-xs text-amber-400 font-mono font-bold transition-colors">OR</button>
+                                    <button onclick="injectSyntax('-', '')" class="px-2.5 py-1.5 rounded-lg bg-[#12151E] hover:bg-gray-800 border border-ddg-cardBorder text-xs text-red-400 font-mono font-bold transition-colors">- (Exclude)</button>
+                                    <button onclick="wrapInQuotes()" class="px-2.5 py-1.5 rounded-lg bg-[#12151E] hover:bg-gray-800 border border-ddg-cardBorder text-xs text-emerald-400 font-mono transition-colors">"Wrap in Quotes"</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Column: Bang Shortcuts & Quick Navigation Reference (1 col) -->
+                <div class="space-y-6">
+
+                    <!-- Popular Bang Shortcuts Card -->
+                    <div class="bg-ddg-cardDark rounded-2xl border border-ddg-cardBorder p-6 shadow-xl">
+                        <div class="flex items-center justify-between mb-3">
+                            <h3 class="text-md font-bold text-white flex items-center space-x-2">
+                                <i class="fa-solid fa-bolt text-ddg-orange"></i>
+                                <span>Fast !Bang Direct Shortcuts</span>
+                            </h3>
+                            <button onclick="switchTab('curriculum')" class="text-xs text-ddg-orange hover:underline">View All</button>
+                        </div>
+                        <p class="text-xs text-gray-400 mb-3">Bangs search external sites directly from DuckDuckGo search bar.</p>
+
+                        <div class="space-y-2">
+                            <div onclick="applyBang('!mdn')" class="flex items-center justify-between p-2 rounded-lg bg-[#12151E] hover:bg-gray-800 border border-ddg-cardBorder cursor-pointer transition-colors">
+                                <div class="flex items-center space-x-2">
+                                    <span class="font-mono text-xs font-bold bg-ddg-orange/20 text-ddg-orange px-2 py-0.5 rounded">!mdn</span>
+                                    <span class="text-xs text-gray-300">Mozilla Developer Network</span>
+                                </div>
+                                <i class="fa-solid fa-angle-right text-gray-500 text-xs"></i>
+                            </div>
+
+                            <div onclick="applyBang('!so')" class="flex items-center justify-between p-2 rounded-lg bg-[#12151E] hover:bg-gray-800 border border-ddg-cardBorder cursor-pointer transition-colors">
+                                <div class="flex items-center space-x-2">
+                                    <span class="font-mono text-xs font-bold bg-amber-500/20 text-amber-400 px-2 py-0.5 rounded">!so</span>
+                                    <span class="text-xs text-gray-300">Stack Overflow</span>
+                                </div>
+                                <i class="fa-solid fa-angle-right text-gray-500 text-xs"></i>
+                            </div>
+
+                            <div onclick="applyBang('!gh')" class="flex items-center justify-between p-2 rounded-lg bg-[#12151E] hover:bg-gray-800 border border-ddg-cardBorder cursor-pointer transition-colors">
+                                <div class="flex items-center space-x-2">
+                                    <span class="font-mono text-xs font-bold bg-purple-500/20 text-purple-400 px-2 py-0.5 rounded">!gh</span>
+                                    <span class="text-xs text-gray-300">GitHub Code & Repos</span>
+                                </div>
+                                <i class="fa-solid fa-angle-right text-gray-500 text-xs"></i>
+                            </div>
+
+                            <div onclick="applyBang('!w')" class="flex items-center justify-between p-2 rounded-lg bg-[#12151E] hover:bg-gray-800 border border-ddg-cardBorder cursor-pointer transition-colors">
+                                <div class="flex items-center space-x-2">
+                                    <span class="font-mono text-xs font-bold bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded">!w</span>
+                                    <span class="text-xs text-gray-300">Wikipedia Encyclopedia</span>
+                                </div>
+                                <i class="fa-solid fa-angle-right text-gray-500 text-xs"></i>
+                            </div>
+
+                            <div onclick="applyBang('!a')" class="flex items-center justify-between p-2 rounded-lg bg-[#12151E] hover:bg-gray-800 border border-ddg-cardBorder cursor-pointer transition-colors">
+                                <div class="flex items-center space-x-2">
+                                    <span class="font-mono text-xs font-bold bg-yellow-500/20 text-yellow-400 px-2 py-0.5 rounded">!a</span>
+                                    <span class="text-xs text-gray-300">Amazon Shopping</span>
+                                </div>
+                                <i class="fa-solid fa-angle-right text-gray-500 text-xs"></i>
+                            </div>
+
+                            <div onclick="applyBang('!yt')" class="flex items-center justify-between p-2 rounded-lg bg-[#12151E] hover:bg-gray-800 border border-ddg-cardBorder cursor-pointer transition-colors">
+                                <div class="flex items-center space-x-2">
+                                    <span class="font-mono text-xs font-bold bg-red-500/20 text-red-400 px-2 py-0.5 rounded">!yt</span>
+                                    <span class="text-xs text-gray-300">YouTube Video</span>
+                                </div>
+                                <i class="fa-solid fa-angle-right text-gray-500 text-xs"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Key Navigation Protocol Cheat Sheet Card -->
+                    <div class="bg-ddg-cardDark rounded-2xl border border-ddg-cardBorder p-6 shadow-xl">
+                        <h3 class="text-md font-bold text-white mb-3 flex items-center space-x-2">
+                            <i class="fa-solid fa-hands-keyboard text-indigo-400"></i>
+                            <span>Navigation Protocols</span>
+                        </h3>
+                        <p class="text-xs text-gray-400 mb-3">Hands-free keyboard browsing controls built into DuckDuckGo.</p>
+
+                        <div class="space-y-2 text-xs">
+                            <div class="flex justify-between items-center py-1.5 border-b border-gray-800">
+                                <span class="text-gray-300"><kbd class="bg-gray-800 px-1.5 py-0.5 rounded text-ddg-orange font-mono">J</kbd> / <kbd class="bg-gray-800 px-1.5 py-0.5 rounded text-ddg-orange font-mono">K</kbd></span>
+                                <span class="text-gray-400">Move down / up in results</span>
+                            </div>
+                            <div class="flex justify-between items-center py-1.5 border-b border-gray-800">
+                                <span class="text-gray-300"><kbd class="bg-gray-800 px-1.5 py-0.5 rounded text-ddg-orange font-mono">D</kbd></span>
+                                <span class="text-gray-400">Domain search on result</span>
+                            </div>
+                            <div class="flex justify-between items-center py-1.5 border-b border-gray-800">
+                                <span class="text-gray-300"><kbd class="bg-gray-800 px-1.5 py-0.5 rounded text-ddg-orange font-mono">/</kbd></span>
+                                <span class="text-gray-400">Jump directly to search bar</span>
+                            </div>
+                            <div class="flex justify-between items-center py-1.5 border-b border-gray-800">
+                                <span class="text-gray-300"><kbd class="bg-gray-800 px-1.5 py-0.5 rounded text-ddg-orange font-mono">M</kbd></span>
+                                <span class="text-gray-400">Snap to main results tab</span>
+                            </div>
+                            <div class="flex justify-between items-center py-1.5">
+                                <span class="text-gray-300"><kbd class="bg-gray-800 px-1.5 py-0.5 rounded text-ddg-orange font-mono">T</kbd></span>
+                                <span class="text-gray-400">Scroll instantly to top</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+        <!-- ==================== VIEW 2: QUERY BUILDER ==================== -->
+        <div id="view-builder" class="hidden space-y-6">
+            <div class="bg-ddg-cardDark rounded-2xl border border-ddg-cardBorder p-6 shadow-xl">
+                <div class="max-w-3xl">
+                    <h2 class="text-xl font-bold text-white mb-2 flex items-center space-x-2">
+                        <i class="fa-solid fa-sliders text-ddg-orange"></i>
+                        <span>Visual Query Builder & Target Composer</span>
+                    </h2>
+                    <p class="text-sm text-gray-400 mb-6">Construct complex multi-variable queries visually without memorizing syntax operators.</p>
+
+                    <!-- Form Inputs -->
+                    <div class="space-y-4">
+                        
+                        <!-- Search Keyword Base -->
+                        <div>
+                            <label class="block text-xs font-semibold uppercase text-gray-400 mb-1">Primary Keywords</label>
+                            <input id="builder-keywords" type="text" placeholder="e.g. async await tutorial" 
+                                class="w-full bg-[#12151E] text-white rounded-lg px-4 py-2.5 border border-ddg-cardBorder focus:border-ddg-orange focus:outline-none font-mono text-sm"
+                                oninput="updateBuiltQuery()">
+                        </div>
+
+                        <!-- Exact Match Phrases -->
+                        <div>
+                            <label class="block text-xs font-semibold uppercase text-gray-400 mb-1">Exact Match Phrase (Quotes)</label>
+                            <input id="builder-exact" type="text" placeholder="e.g. node.js best practices" 
+                                class="w-full bg-[#12151E] text-white rounded-lg px-4 py-2.5 border border-ddg-cardBorder focus:border-ddg-orange focus:outline-none font-mono text-sm"
+                                oninput="updateBuiltQuery()">
+                        </div>
+
+                        <!-- Grid: Site and File Type -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-semibold uppercase text-gray-400 mb-1">Specific Domain (<code class="text-ddg-orange">site:</code>)</label>
+                                <input id="builder-site" type="text" placeholder="e.g. github.com or .edu" 
+                                    class="w-full bg-[#12151E] text-white rounded-lg px-4 py-2.5 border border-ddg-cardBorder focus:border-ddg-orange focus:outline-none font-mono text-sm"
+                                    oninput="updateBuiltQuery()">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold uppercase text-gray-400 mb-1">File Format (<code class="text-ddg-teal">filetype:</code>)</label>
+                                <select id="builder-filetype" class="w-full bg-[#12151E] text-white rounded-lg px-4 py-2.5 border border-ddg-cardBorder focus:border-ddg-orange focus:outline-none font-mono text-sm" onchange="updateBuiltQuery()">
+                                    <option value="">Any format (Default)</option>
+                                    <option value="pdf">PDF Document (.pdf)</option>
+                                    <option value="doc">Word Document (.doc / .docx)</option>
+                                    <option value="ppt">PowerPoint Presentation (.ppt)</option>
+                                    <option value="csv">CSV Spreadsheet (.csv)</option>
+                                    <option value="json">JSON Data (.json)</option>
+                                    <option value="py">Python File (.py)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Grid: Term Placement and Exclusions -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-semibold uppercase text-gray-400 mb-1">Term Placement Filter</label>
+                                <div class="flex space-x-2">
+                                    <select id="builder-placement-type" class="bg-[#12151E] text-white rounded-lg px-3 py-2.5 border border-ddg-cardBorder focus:border-ddg-orange focus:outline-none font-mono text-sm" onchange="updateBuiltQuery()">
+                                        <option value="intitle:">intitle:</option>
+                                        <option value="inurl:">inurl:</option>
+                                        <option value="inbody:">inbody:</option>
+                                    </select>
+                                    <input id="builder-placement-val" type="text" placeholder="Placement keyword" 
+                                        class="flex-1 bg-[#12151E] text-white rounded-lg px-4 py-2.5 border border-ddg-cardBorder focus:border-ddg-orange focus:outline-none font-mono text-sm"
+                                        oninput="updateBuiltQuery()">
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-semibold uppercase text-gray-400 mb-1">Exclude Terms (<code class="text-red-400">-term</code>)</label>
+                                <input id="builder-exclude" type="text" placeholder="e.g. deprecated legacy" 
+                                    class="w-full bg-[#12151E] text-white rounded-lg px-4 py-2.5 border border-ddg-cardBorder focus:border-ddg-orange focus:outline-none font-mono text-sm"
+                                    oninput="updateBuiltQuery()">
+                            </div>
+                        </div>
+
+                        <!-- Bang Destination Selector -->
+                        <div>
+                            <label class="block text-xs font-semibold uppercase text-gray-400 mb-1">Target Engine / Direct !Bang Route</label>
+                            <select id="builder-bang" class="w-full bg-[#12151E] text-white rounded-lg px-4 py-2.5 border border-ddg-cardBorder focus:border-ddg-orange focus:outline-none font-mono text-sm" onchange="updateBuiltQuery()">
+                                <option value="">DuckDuckGo Standard Search</option>
+                                <option value="!mdn">!mdn - Mozilla Developer Network</option>
+                                <option value="!so">!so - Stack Overflow</option>
+                                <option value="!gh">!gh - GitHub</option>
+                                <option value="!w">!w - Wikipedia</option>
+                                <option value="!g">!g - Google</option>
+                                <option value="!a">!a - Amazon</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Live Compiled Output Display -->
+                    <div class="mt-8 p-5 bg-[#12151E] rounded-xl border border-ddg-orange/40 shadow-inner">
+                        <label class="block text-xs font-semibold uppercase text-ddg-orange mb-2">Compiled Search Query Result</label>
+                        <div id="builder-output" class="font-mono text-base text-white break-all min-h-[1.5rem] select-all"></div>
+                        <div class="mt-4 flex flex-wrap gap-2 justify-end">
+                            <button onclick="copyBuiltQuery()" class="px-4 py-2 rounded-lg bg-gray-800 hover:bg-gray-700 text-xs font-semibold text-gray-200 transition-colors flex items-center space-x-1.5">
+                                <i class="fa-regular fa-copy"></i>
+                                <span>Copy Query</span>
+                            </button>
+                            <button onclick="sendBuiltToAssistant()" class="px-4 py-2 rounded-lg bg-ddg-orange hover:bg-ddg-hover text-xs font-semibold text-white transition-colors flex items-center space-x-1.5">
+                                <i class="fa-solid fa-wand-magic-sparkles"></i>
+                                <span>Load in Live Assistant</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+        <!-- ==================== VIEW 3: RULES & CURRICULUM REFERENCE ==================== -->
+        <div id="view-curriculum" class="hidden space-y-6">
+            
+            <!-- Phase Tabs Header -->
+            <div class="bg-ddg-cardDark rounded-2xl border border-ddg-cardBorder p-6 shadow-xl">
+                <div class="flex items-center justify-between mb-4">
+                    <div>
+                        <h2 class="text-xl font-bold text-white flex items-center space-x-2">
+                            <i class="fa-solid fa-book-bookmark text-ddg-orange"></i>
+                            <span>DuckDuckGo Implementation & Knowledge Base</span>
+                        </h2>
+                        <p class="text-xs text-gray-400">Streamlined sequential guidance, search operators, and operational rules.</p>
+                    </div>
+                </div>
+
+                <!-- Phase Tabs -->
+                <div class="flex flex-wrap gap-2 border-b border-gray-800 pb-4">
+                    <button id="p-tab-1" onclick="switchPhase('p1')" class="px-4 py-2 rounded-lg text-xs font-semibold bg-ddg-orange text-white">Phase 1: Foundational Efficiency</button>
+                    <button id="p-tab-2" onclick="switchPhase('p2')" class="px-4 py-2 rounded-lg text-xs font-semibold bg-gray-800 text-gray-400 hover:text-white">Phase 2: Core Research & Retrieval</button>
+                    <button id="p-tab-3" onclick="switchPhase('p3')" class="px-4 py-2 rounded-lg text-xs font-semibold bg-gray-800 text-gray-400 hover:text-white">Phase 3: Automation & Chaining</button>
+                    <button id="p-tab-utils" onclick="switchPhase('putils')" class="px-4 py-2 rounded-lg text-xs font-semibold bg-gray-800 text-gray-400 hover:text-white">Technical Reference Cards</button>
+                </div>
+
+                <!-- Phase 1 Content -->
+                <div id="phase-content-p1" class="pt-6 space-y-4">
+                    <h3 class="text-md font-bold text-ddg-orange">Phase 1: Foundational Efficiency & Navigation</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                        <div class="p-4 rounded-xl bg-[#12151E] border border-ddg-cardBorder">
+                            <span class="font-bold text-sm text-white block mb-1">Keyboard Navigation Protocols</span>
+                            <p class="text-gray-400 mb-2">Traverse search results without touching the mouse.</p>
+                            <ul class="space-y-1 text-gray-300 font-mono">
+                                <li>• J / K: Move down and up through result links</li>
+                                <li>• D: Domain search on highlighted item</li>
+                                <li>• /: Instant cursor focus to search box</li>
+                                <li>• M: Return to main search results tab</li>
+                                <li>• T: Jump straight to top of page</li>
+                            </ul>
+                        </div>
+
+                        <div class="p-4 rounded-xl bg-[#12151E] border border-ddg-cardBorder">
+                            <span class="font-bold text-sm text-white block mb-1">On-the-Fly Utility Commands</span>
+                            <p class="text-gray-400 mb-2">Execute instant computational and security utilities.</p>
+                            <ul class="space-y-1 text-gray-300 font-mono">
+                                <li>• password [number]: Generate secure passphrase</li>
+                                <li>• timer [time]: Start interactive countdown</li>
+                                <li>• shorten [url]: Compress target link</li>
+                                <li>• html chars: HTML entity quick reference</li>
+                                <li>• ascii: ASCII code table lookup</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Phase 2 Content -->
+                <div id="phase-content-p2" class="hidden pt-6 space-y-4">
+                    <h3 class="text-md font-bold text-ddg-teal">Phase 2: Core Research & Information Retrieval</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                        <div class="p-4 rounded-xl bg-[#12151E] border border-ddg-cardBorder">
+                            <span class="font-bold text-sm text-white block mb-1">Targeted Filtering & Placement</span>
+                            <p class="text-gray-400 mb-2">Filter formats and isolate precise word positioning.</p>
+                            <ul class="space-y-1.5 text-gray-300 font-mono">
+                                <li>• <span class="text-ddg-orange">site:</span> restrict results to specific domain</li>
+                                <li>• <span class="text-ddg-teal">filetype:</span> filter extensions (pdf, doc, csv)</li>
+                                <li>• <span class="text-blue-400">intitle:</span> force keyword in document title</li>
+                                <li>• <span class="text-purple-400">inurl:</span> force keyword in URL path</li>
+                                <li>• <span class="text-pink-400">inbody:</span> force keyword in page body text</li>
+                            </ul>
+                        </div>
+
+                        <div class="p-4 rounded-xl bg-[#12151E] border border-ddg-cardBorder">
+                            <span class="font-bold text-sm text-white block mb-1">Advanced Boolean Logic</span>
+                            <p class="text-gray-400 mb-2">Dual purpose: complex queries & syntax troubleshooting.</p>
+                            <ul class="space-y-1.5 text-gray-300 font-mono">
+                                <li>• <span class="text-amber-400 font-bold">AND</span>: Require both terms (must be uppercase)</li>
+                                <li>• <span class="text-amber-400 font-bold">OR</span>: Match either term</li>
+                                <li>• <span class="text-red-400 font-bold">-term</span>: Exclude unwanted results</li>
+                                <li>• <span class="text-emerald-400">"exact phrase"</span>: Lock exact word ordering</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Phase 3 Content -->
+                <div id="phase-content-p3" class="hidden pt-6 space-y-4">
+                    <h3 class="text-md font-bold text-purple-400">Phase 3: Workflow Automation & Cross-Platform Chaining</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                        <div class="p-4 rounded-xl bg-[#12151E] border border-ddg-cardBorder">
+                            <span class="font-bold text-sm text-white block mb-1">Cross-Engine !Bang Routing</span>
+                            <p class="text-gray-400 mb-2">Route directly to external engines without intermediate navigation.</p>
+                            <ul class="space-y-1.5 text-gray-300 font-mono">
+                                <li>• !mdn [query] -> Developer documentation</li>
+                                <li>• !a [query] -> Amazon marketplace</li>
+                                <li>• !g [query] -> Encrypted Google fallback</li>
+                                <li>• !so [query] -> Stack Overflow issues</li>
+                                <li>• !w [query] -> Wikipedia reference</li>
+                            </ul>
+                        </div>
+
+                        <div class="p-4 rounded-xl bg-[#12151E] border border-ddg-cardBorder">
+                            <span class="font-bold text-sm text-white block mb-1">Privacy & Workflow Quality</span>
+                            <p class="text-gray-400 mb-2">Systematic privacy-focused browsing and stability.</p>
+                            <ul class="space-y-1.5 text-gray-300 font-mono">
+                                <li>• Zero tracking search execution</li>
+                                <li>• Bottleneck detection protocols</li>
+                                <li>• Unified syntax context preservation</li>
+                                <li>• Eradication of redundant search padding</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Technical Reference Cards -->
+                <div id="phase-content-putils" class="hidden pt-6 space-y-6">
+                    <h3 class="text-md font-bold text-blue-400">Technical Quick Reference Tables</h3>
+
+                    <!-- HTML Character Codes Cheat Sheet -->
+                    <div>
+                        <h4 class="text-xs font-bold uppercase text-gray-300 mb-2">HTML Entities & Characters</h4>
+                        <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-2 text-xs font-mono">
+                            <div class="p-2 bg-[#12151E] rounded border border-gray-800 flex justify-between">
+                                <span class="text-gray-400">&amp;lt;</span>
+                                <span class="text-ddg-orange">&lt;</span>
+                            </div>
+                            <div class="p-2 bg-[#12151E] rounded border border-gray-800 flex justify-between">
+                                <span class="text-gray-400">&amp;gt;</span>
+                                <span class="text-ddg-orange">&gt;</span>
+                            </div>
+                            <div class="p-2 bg-[#12151E] rounded border border-gray-800 flex justify-between">
+                                <span class="text-gray-400">&amp;amp;</span>
+                                <span class="text-ddg-orange">&amp;</span>
+                            </div>
+                            <div class="p-2 bg-[#12151E] rounded border border-gray-800 flex justify-between">
+                                <span class="text-gray-400">&amp;quot;</span>
+                                <span class="text-ddg-orange">&quot;</span>
+                            </div>
+                            <div class="p-2 bg-[#12151E] rounded border border-gray-800 flex justify-between">
+                                <span class="text-gray-400">&amp;copy;</span>
+                                <span class="text-ddg-orange">&copy;</span>
+                            </div>
+                            <div class="p-2 bg-[#12151E] rounded border border-gray-800 flex justify-between">
+                                <span class="text-gray-400">&amp;nbsp;</span>
+                                <span class="text-ddg-orange">(space)</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ASCII Code Sample Card -->
+                    <div>
+                        <h4 class="text-xs font-bold uppercase text-gray-300 mb-2">ASCII Sample Lookup</h4>
+                        <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-2 text-xs font-mono">
+                            <div class="p-2 bg-[#12151E] rounded border border-gray-800 flex justify-between">
+                                <span class="text-gray-400">Dec 65</span>
+                                <span class="text-ddg-teal">A</span>
+                            </div>
+                            <div class="p-2 bg-[#12151E] rounded border border-gray-800 flex justify-between">
+                                <span class="text-gray-400">Dec 97</span>
+                                <span class="text-ddg-teal">a</span>
+                            </div>
+                            <div class="p-2 bg-[#12151E] rounded border border-gray-800 flex justify-between">
+                                <span class="text-gray-400">Dec 48</span>
+                                <span class="text-ddg-teal">0</span>
+                            </div>
+                            <div class="p-2 bg-[#12151E] rounded border border-gray-800 flex justify-between">
+                                <span class="text-gray-400">Dec 32</span>
+                                <span class="text-ddg-teal">Space</span>
+                            </div>
+                            <div class="p-2 bg-[#12151E] rounded border border-gray-800 flex justify-between">
+                                <span class="text-gray-400">Dec 10</span>
+                                <span class="text-ddg-teal">LF</span>
+                            </div>
+                            <div class="p-2 bg-[#12151E] rounded border border-gray-800 flex justify-between">
+                                <span class="text-gray-400">Dec 38</span>
+                                <span class="text-ddg-teal">&amp;</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Footer with Copyright License -->
+    <footer class="border-t border-ddg-cardBorder bg-[#12151E] py-6 px-4 text-center text-xs text-gray-400 mt-10">
+        <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div class="flex items-center space-x-2">
+                <span class="text-lg">🦆</span>
+                <span class="font-semibold text-gray-300">DuckDuckGo Syntax Assistant</span>
+                <span class="text-gray-600">|</span>
+                <span id="copyright-text" class="text-gray-400">Copyright &copy; <span id="copyright-year">2026</span> <span id="license-owner-name">Author / Rightsholder</span>. All Rights Reserved.</span>
+            </div>
+            <div class="flex items-center space-x-4">
+                <button onclick="toggleLicenseModal()" class="text-ddg-orange hover:text-white transition-colors underline flex items-center space-x-1">
+                    <i class="fa-solid fa-scale-balanced text-[11px]"></i>
+                    <span>View MIT License</span>
+                </button>
+                <span class="text-gray-600">|</span>
+                <span class="text-gray-500">MIT Open-Source License</span>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Keyboard Shortcut Help Modal -->
+    <div id="keyboard-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-ddg-cardDark border border-ddg-cardBorder rounded-2xl max-w-md w-full p-6 shadow-2xl relative">
+            <button onclick="toggleKeyboardHelp()" class="absolute top-4 right-4 text-gray-400 hover:text-white">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+            <h3 class="text-lg font-bold text-white mb-4 flex items-center space-x-2">
+                <i class="fa-solid fa-keyboard text-ddg-orange"></i>
+                <span>Keyboard Shortcuts Reference</span>
+            </h3>
+            <div class="space-y-3 text-sm">
+                <div class="flex justify-between items-center py-2 border-b border-gray-800">
+                    <span class="text-gray-300">Focus Search Input</span>
+                    <kbd class="bg-gray-800 border border-gray-700 px-2 py-0.5 rounded text-ddg-orange font-mono font-bold">/</kbd>
+                </div>
+                <div class="flex justify-between items-center py-2 border-b border-gray-800">
+                    <span class="text-gray-300">Navigate Suggestions Down/Up</span>
+                    <span class="font-mono text-ddg-orange font-bold"><kbd class="bg-gray-800 border border-gray-700 px-2 py-0.5 rounded">J</kbd> / <kbd class="bg-gray-800 border border-gray-700 px-2 py-0.5 rounded">K</kbd></span>
+                </div>
+                <div class="flex justify-between items-center py-2 border-b border-gray-800">
+                    <span class="text-gray-300">Add <code class="text-ddg-teal">site:</code> filter</span>
+                    <kbd class="bg-gray-800 border border-gray-700 px-2 py-0.5 rounded text-ddg-orange font-mono font-bold">D</kbd>
+                </div>
+                <div class="flex justify-between items-center py-2 border-b border-gray-800">
+                    <span class="text-gray-300">Return to Main View</span>
+                    <kbd class="bg-gray-800 border border-gray-700 px-2 py-0.5 rounded text-ddg-orange font-mono font-bold">M</kbd>
+                </div>
+                <div class="flex justify-between items-center py-2 border-b border-gray-800">
+                    <span class="text-gray-300">Scroll to Top</span>
+                    <kbd class="bg-gray-800 border border-gray-700 px-2 py-0.5 rounded text-ddg-orange font-mono font-bold">T</kbd>
+                </div>
+                <div class="flex justify-between items-center py-2">
+                    <span class="text-gray-300">Toggle Shortcuts Window</span>
+                    <kbd class="bg-gray-800 border border-gray-700 px-2 py-0.5 rounded text-ddg-orange font-mono font-bold">?</kbd>
+                </div>
+            </div>
+            <div class="mt-6 text-center">
+                <button onclick="toggleKeyboardHelp()" class="bg-ddg-orange hover:bg-ddg-hover text-white px-5 py-2 rounded-lg text-xs font-semibold">Got it</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Copyright & License Modal -->
+    <div id="license-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-ddg-cardDark border border-ddg-cardBorder rounded-2xl max-w-lg w-full p-6 shadow-2xl relative">
+            <button onclick="toggleLicenseModal()" class="absolute top-4 right-4 text-gray-400 hover:text-white">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+            
+            <h3 class="text-lg font-bold text-white mb-2 flex items-center space-x-2">
+                <i class="fa-solid fa-scale-balanced text-ddg-orange"></i>
+                <span>Copyright & License Details</span>
+            </h3>
+            <p class="text-xs text-gray-400 mb-4">You can personalize and assign ownership for this software application below.</p>
+
+            <!-- Editable Name Field -->
+            <div class="mb-4 bg-[#12151E] p-3 rounded-xl border border-ddg-cardBorder">
+                <label for="owner-input" class="block text-xs font-semibold uppercase text-ddg-orange mb-1">Copyright Holder / Your Name</label>
+                <div class="flex space-x-2">
+                    <input id="owner-input" type="text" value="Author / Rightsholder" 
+                        placeholder="Enter your name or organization..." 
+                        class="flex-1 bg-[#1A202C] text-white text-xs rounded-lg px-3 py-2 border border-ddg-cardBorder focus:border-ddg-orange focus:outline-none font-mono"
+                        oninput="updateCopyrightHolder(this.value)">
+                    <button onclick="saveCopyrightName()" class="bg-ddg-orange hover:bg-ddg-hover text-white text-xs px-3 py-2 rounded-lg font-semibold transition-colors">
+                        Save
+                    </button>
+                </div>
+            </div>
+
+            <!-- Full License Text Container -->
+            <div class="bg-[#12151E] p-4 rounded-xl border border-ddg-cardBorder font-mono text-[11px] text-gray-300 max-h-60 overflow-y-auto leading-relaxed select-all">
+                <p class="text-white font-bold mb-2">MIT License</p>
+                <p class="mb-3 text-ddg-teal font-semibold">Copyright (c) <span class="license-year-display">2026</span> <span class="license-name-display">Author / Rightsholder</span></p>
+                
+                <p class="mb-2">Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:</p>
+                
+                <p class="mb-2">The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.</p>
+                
+                <p class="text-gray-400 italic">THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.</p>
+            </div>
+
+            <div class="mt-5 flex justify-between items-center">
+                <button onclick="copyLicenseText()" class="px-3 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-xs font-semibold text-gray-200 transition-colors flex items-center space-x-1.5">
+                    <i class="fa-regular fa-copy"></i>
+                    <span>Copy Full License Text</span>
+                </button>
+                <button onclick="toggleLicenseModal()" class="bg-ddg-orange hover:bg-ddg-hover text-white px-5 py-1.5 rounded-lg text-xs font-semibold">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global State Engine
+        let selectedSuggestionIndex = -1;
+        let activeTimerInterval = null;
+
+        // Initialize Page
+        window.onload = function() {
+            setupKeyboardListeners();
+            handleSearchInput();
+            
+            // Load saved copyright name if available in local storage
+            const savedOwner = localStorage.getItem('ddg_assistant_copyright_owner');
+            if (savedOwner) {
+                document.getElementById('owner-input').value = savedOwner;
+                updateCopyrightHolder(savedOwner);
+            }
+        };
+
+        // Copyright Handler Functions
+        function updateCopyrightHolder(name) {
+            const finalName = name.trim() || 'Author / Rightsholder';
+            document.getElementById('license-owner-name').innerText = finalName;
+            document.querySelectorAll('.license-name-display').forEach(el => el.innerText = finalName);
+        }
+
+        function saveCopyrightName() {
+            const val = document.getElementById('owner-input').value.trim() || 'Author / Rightsholder';
+            localStorage.setItem('ddg_assistant_copyright_owner', val);
+            updateCopyrightHolder(val);
+            showToast('Copyright name saved!', 'success');
+        }
+
+        function toggleLicenseModal() {
+            const modal = document.getElementById('license-modal');
+            modal.classList.toggle('hidden');
+        }
+
+        function copyLicenseText() {
+            const owner = document.getElementById('license-owner-name').innerText;
+            const fullText = `MIT License\n\nCopyright (c) 2026 ${owner}\n\nPermission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:\n\nThe above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.\n\nTHE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.`;
+            copyToClipboard(fullText);
+        }
+
+        // Tab Switching Logic
+        function switchTab(tabId) {
+            ['assistant', 'builder', 'curriculum'].forEach(id => {
+                const view = document.getElementById(`view-${id}`);
+                const tab = document.getElementById(`tab-${id}`);
+                if (id === tabId) {
+                    view.classList.remove('hidden');
+                    tab.classList.add('bg-ddg-orange', 'text-white');
+                    tab.classList.remove('text-gray-300', 'hover:bg-ddg-cardDark');
+                } else {
+                    view.classList.add('hidden');
+                    tab.classList.remove('bg-ddg-orange', 'text-white');
+                    tab.classList.add('text-gray-300', 'hover:bg-ddg-cardDark');
+                }
+            });
+            if (tabId === 'assistant') {
+                document.getElementById('search-input').focus();
+            }
+        }
+
+        // Phase Curriculum Switcher
+        function switchPhase(phaseId) {
+            ['p1', 'p2', 'p3', 'putils'].forEach(id => {
+                const content = document.getElementById(`phase-content-${id}`);
+                const tab = document.getElementById(`p-tab-${id === 'p1' ? '1' : id === 'p2' ? '2' : id === 'p3' ? '3' : 'utils'}`);
+                if (id === phaseId) {
+                    content.classList.remove('hidden');
+                    tab.classList.add('bg-ddg-orange', 'text-white');
+                    tab.classList.remove('bg-gray-800', 'text-gray-400');
+                } else {
+                    content.classList.add('hidden');
+                    tab.classList.remove('bg-ddg-orange', 'text-white');
+                    tab.classList.add('bg-gray-800', 'text-gray-400');
+                }
+            });
+        }
+
+        // Search Bar Logic
+        function handleSearchInput() {
+            const query = document.getElementById('search-input').value;
+            const clearBtn = document.getElementById('clear-btn');
+            
+            if (query.trim().length > 0) {
+                clearBtn.classList.remove('hidden');
+            } else {
+                clearBtn.classList.add('hidden');
+            }
+
+            analyzeQuery(query);
+            selectedSuggestionIndex = -1;
+        }
+
+        function clearSearch() {
+            const input = document.getElementById('search-input');
+            input.value = '';
+            handleSearchInput();
+            input.focus();
+        }
+
+        function setSampleQuery(q) {
+            const input = document.getElementById('search-input');
+            input.value = q;
+            handleSearchInput();
+            input.focus();
+        }
+
+        // Contextual Query Syntax Analyzer
+        function analyzeQuery(query) {
+            const trimmed = query.trim();
+            const suggestionsList = document.getElementById('suggestions-list');
+            const emptyNotice = document.getElementById('empty-suggestions-notice');
+            const countBadge = document.getElementById('suggestion-count');
+            const utilityContainer = document.getElementById('utility-card-container');
+
+            // Reset Detector Tags
+            resetDetectorTags();
+
+            if (!trimmed) {
+                suggestionsList.innerHTML = '';
+                emptyNotice.classList.remove('hidden');
+                utilityContainer.classList.add('hidden');
+                utilityContainer.innerHTML = '';
+                countBadge.innerText = '0 suggestions';
+                return;
+            }
+
+            emptyNotice.classList.add('hidden');
+            const suggestions = [];
+
+            // 1. Detect Password Generator Utility: e.g. "password 16" or "password"
+            const passMatch = trimmed.match(/^password\s*(\d*)$/i);
+            if (passMatch) {
+                activateTag('tag-utility');
+                const len = parseInt(passMatch[1]) || 16;
+                renderPasswordUtility(len);
+            } else if (trimmed.match(/^timer\s*(\d+[smh]?)$/i)) {
+                activateTag('tag-utility');
+                const timeStr = trimmed.match(/^timer\s*(\d+[smh]?)$/i)[1];
+                renderTimerUtility(timeStr);
+            } else if (trimmed.toLowerCase().includes('html chars') || trimmed.toLowerCase() === 'html') {
+                activateTag('tag-utility');
+                renderHtmlCharsUtility();
+            } else if (trimmed.toLowerCase().includes('ascii')) {
+                activateTag('tag-utility');
+                renderAsciiUtility();
+            } else if (trimmed.match(/^shorten\s+(https?:\/\/\S+)$/i)) {
+                activateTag('tag-utility');
+                const targetUrl = trimmed.match(/^shorten\s+(https?:\/\/\S+)$/i)[1];
+                renderShortenUtility(targetUrl);
+            } else if (trimmed.match(/^(\d+[\s\+\-\*\/\(\)]+)+\d+$/)) {
+                activateTag('tag-utility');
+                renderMathUtility(trimmed);
+            } else {
+                utilityContainer.classList.add('hidden');
+            }
+
+            // 2. Exact Phrase Match Suggestion
+            if (trimmed.includes(' ') && !trimmed.startsWith('"') && !trimmed.endsWith('"')) {
+                activateTag('tag-quote');
+                suggestions.push({
+                    type: 'Exact Phrase Match',
+                    icon: 'fa-quote-left',
+                    color: 'emerald',
+                    title: 'Wrap phrase in quotes',
+                    description: 'Ensures DuckDuckGo matches this exact phrase sequence.',
+                    actionQuery: `"${trimmed}"`,
+                    badge: '" phrase "'
+                });
+            }
+
+            // 3. Lowercase Boolean Correction (and, or)
+            if (/\b(and|or)\b/.test(trimmed)) {
+                activateTag('tag-boolean');
+                const corrected = trimmed.replace(/\band\b/g, 'AND').replace(/\bor\b/g, 'OR');
+                suggestions.push({
+                    type: 'Boolean Logic Correction',
+                    icon: 'fa-font',
+                    color: 'amber',
+                    title: 'Capitalize Boolean Operators',
+                    description: 'DuckDuckGo requires uppercase AND / OR for Boolean logic.',
+                    actionQuery: corrected,
+                    badge: 'AND / OR'
+                });
+            }
+
+            // 4. Filetype Suggestions based on keywords
+            if ((trimmed.toLowerCase().includes('pdf') || trimmed.toLowerCase().includes('cheat sheet') || trimmed.toLowerCase().includes('doc') || trimmed.toLowerCase().includes('paper')) && !trimmed.includes('filetype:')) {
+                activateTag('tag-filter');
+                const fileQuery = `${trimmed.replace(/\bpdf\b/gi, '').trim()} filetype:pdf`.trim();
+                suggestions.push({
+                    type: 'Target Format Isolation',
+                    icon: 'fa-file-pdf',
+                    color: 'teal',
+                    title: 'Filter by PDF Document',
+                    description: 'Appends filetype:pdf operator to return direct PDF files.',
+                    actionQuery: fileQuery,
+                    badge: 'filetype:pdf'
+                });
+            }
+
+            // 5. Site Filter Suggestions
+            if (!trimmed.includes('site:')) {
+                if (trimmed.toLowerCase().includes('github') || trimmed.toLowerCase().includes('repo') || trimmed.toLowerCase().includes('code')) {
+                    activateTag('tag-filter');
+                    suggestions.push({
+                        type: 'Domain Constraint',
+                        icon: 'fa-globe',
+                        color: 'orange',
+                        title: 'Restrict to GitHub',
+                        description: 'Limit results strictly to site:github.com.',
+                        actionQuery: `${trimmed} site:github.com`,
+                        badge: 'site:github.com'
+                    });
+                } else if (trimmed.toLowerCase().includes('docs') || trimmed.toLowerCase().includes('reference')) {
+                    activateTag('tag-filter');
+                    suggestions.push({
+                        type: 'Granular Placement',
+                        icon: 'fa-heading',
+                        color: 'purple',
+                        title: 'Target URL Path with inurl:',
+                        description: 'Ensure keyword appears in website URL.',
+                        actionQuery: `inurl:docs ${trimmed}`,
+                        badge: 'inurl:docs'
+                    });
+                }
+            }
+
+            // 6. !Bang Destination Trigger
+            const bangMatch = trimmed.match(/^!([a-z0-9]+)/i);
+            if (bangMatch) {
+                activateTag('tag-bang');
+                suggestions.push({
+                    type: 'Bang Command Detected',
+                    icon: 'fa-bolt',
+                    color: 'orange',
+                    title: `Direct Route: !${bangMatch[1]}`,
+                    description: `This query will directly bypass DDG and search the !${bangMatch[1]} external engine.`,
+                    actionQuery: trimmed,
+                    badge: `!${bangMatch[1]}`
+                });
+            } else {
+                // Suggest relevant bang based on query
+                if (trimmed.toLowerCase().includes('js') || trimmed.toLowerCase().includes('css') || trimmed.toLowerCase().includes('html') || trimmed.toLowerCase().includes('flexbox')) {
+                    activateTag('tag-bang');
+                    suggestions.push({
+                        type: 'Developer Bang Route',
+                        icon: 'fa-code',
+                        color: 'blue',
+                        title: 'Use !mdn Direct Shortcut',
+                        description: 'Jump straight to Mozilla Developer Network.',
+                        actionQuery: `!mdn ${trimmed}`,
+                        badge: '!mdn'
+                    });
+                }
+            }
+
+            // 7. General placement suggestions (intitle:, inbody:)
+            if (trimmed.length > 5 && !trimmed.includes('intitle:') && !trimmed.includes('inbody:')) {
+                suggestions.push({
+                    type: 'Term Placement',
+                    icon: 'fa-heading',
+                    color: 'indigo',
+                    title: 'Force Title Match with intitle:',
+                    description: 'Ensure terms appear specifically inside the page HTML title.',
+                    actionQuery: `intitle:${trimmed}`,
+                    badge: 'intitle:'
+                });
+            }
+
+            // Render Suggestions
+            renderSuggestionsList(suggestions);
+        }
+
+        function renderSuggestionsList(suggestions) {
+            const container = document.getElementById('suggestions-list');
+            const countBadge = document.getElementById('suggestion-count');
+            countBadge.innerText = `${suggestions.length} suggestion${suggestions.length === 1 ? '' : 's'}`;
+
+            if (suggestions.length === 0) {
+                container.innerHTML = `
+                    <div class="p-4 rounded-xl bg-[#12151E] border border-ddg-cardBorder text-gray-400 text-xs">
+                        <i class="fa-solid fa-check text-ddg-teal mr-2"></i> Query formatting looks well structured! No corrections required.
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = suggestions.map((item, idx) => `
+                <div id="suggestion-item-${idx}" onclick="applySuggestion('${escapeQuotes(item.actionQuery)}')" 
+                    class="p-4 rounded-xl bg-[#12151E] hover:bg-gray-800/80 border border-ddg-cardBorder transition-all cursor-pointer group flex items-start justify-between">
+                    <div class="space-y-1">
+                        <div class="flex items-center space-x-2">
+                            <span class="text-xs font-semibold px-2 py-0.5 rounded bg-${item.color}-500/20 text-${item.color}-400 border border-${item.color}-500/30 flex items-center gap-1">
+                                <i class="fa-solid ${item.icon} text-[10px]"></i>
+                                ${item.type}
+                            </span>
+                            <span class="font-mono text-xs text-gray-400 group-hover:text-ddg-orange transition-colors">${item.badge}</span>
+                        </div>
+                        <h4 class="text-sm font-bold text-white group-hover:text-ddg-orange transition-colors">${item.title}</h4>
+                        <p class="text-xs text-gray-400">${item.description}</p>
+                        <div class="pt-1">
+                            <span class="text-xs font-mono text-ddg-teal bg-ddg-teal/10 px-2 py-0.5 rounded border border-ddg-teal/20 inline-block">${item.actionQuery}</span>
+                        </div>
+                    </div>
+                    <button class="px-3 py-1.5 rounded-lg bg-ddg-orange/20 text-ddg-orange group-hover:bg-ddg-orange group-hover:text-white transition-all text-xs font-semibold flex items-center space-x-1">
+                        <span>Apply</span>
+                        <i class="fa-solid fa-arrow-right text-[10px]"></i>
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        // Utility Render Functions
+        function renderPasswordUtility(length) {
+            const container = document.getElementById('utility-card-container');
+            container.classList.remove('hidden');
+            const generatedPass = generatePassphrase(length);
+
+            container.innerHTML = `
+                <div class="bg-gradient-to-r from-ddg-cardDark to-[#1A2333] rounded-2xl border border-ddg-orange/50 p-5 shadow-xl">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-xs font-bold uppercase text-ddg-orange flex items-center space-x-1.5">
+                            <i class="fa-solid fa-key"></i>
+                            <span>Instant Passphrase Utility</span>
+                        </span>
+                        <span class="text-xs text-gray-400">${length} characters</span>
+                    </div>
+                    <div class="flex items-center space-x-2 bg-[#12151E] p-3 rounded-xl border border-ddg-cardBorder">
+                        <span class="font-mono text-lg font-bold text-emerald-400 flex-1 break-all select-all">${generatedPass}</span>
+                        <button onclick="copyToClipboard('${generatedPass}')" class="px-3 py-2 bg-ddg-orange hover:bg-ddg-hover text-white rounded-lg text-xs font-semibold transition-colors flex items-center space-x-1">
+                            <i class="fa-regular fa-copy"></i>
+                            <span>Copy</span>
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderTimerUtility(timeStr) {
+            const container = document.getElementById('utility-card-container');
+            container.classList.remove('hidden');
+
+            let seconds = 300; // default 5m
+            if (timeStr.endsWith('s')) seconds = parseInt(timeStr);
+            else if (timeStr.endsWith('m')) seconds = parseInt(timeStr) * 60;
+            else if (timeStr.endsWith('h')) seconds = parseInt(timeStr) * 3600;
+            else if (!isNaN(parseInt(timeStr))) seconds = parseInt(timeStr) * 60;
+
+            container.innerHTML = `
+                <div class="bg-gradient-to-r from-ddg-cardDark to-[#1A2333] rounded-2xl border border-ddg-teal/50 p-5 shadow-xl">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-xs font-bold uppercase text-ddg-teal flex items-center space-x-1.5">
+                            <i class="fa-solid fa-stopwatch"></i>
+                            <span>Interactive Countdown Timer</span>
+                        </span>
+                        <span class="text-xs text-gray-400">Timer Command</span>
+                    </div>
+                    <div class="flex items-center justify-between bg-[#12151E] p-4 rounded-xl border border-ddg-cardBorder">
+                        <div class="font-mono text-3xl font-bold text-white tracking-widest" id="timer-display">${formatTimerDisplay(seconds)}</div>
+                        <div class="flex space-x-2">
+                            <button onclick="startTimer(${seconds})" class="px-3 py-1.5 bg-ddg-teal hover:bg-emerald-600 text-white rounded-lg text-xs font-semibold transition-colors">Start</button>
+                            <button onclick="resetTimer()" class="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg text-xs font-semibold transition-colors">Reset</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderHtmlCharsUtility() {
+            const container = document.getElementById('utility-card-container');
+            container.classList.remove('hidden');
+            container.innerHTML = `
+                <div class="bg-ddg-cardDark rounded-2xl border border-blue-500/50 p-5 shadow-xl">
+                    <span class="text-xs font-bold uppercase text-blue-400 block mb-2"><i class="fa-solid fa-code mr-1"></i> HTML Characters Reference</span>
+                    <div class="grid grid-cols-3 sm:grid-cols-6 gap-2 font-mono text-xs">
+                        <div class="p-2 bg-[#12151E] rounded text-center border border-gray-800"><span class="text-gray-400 block">&amp;lt;</span> &lt;</div>
+                        <div class="p-2 bg-[#12151E] rounded text-center border border-gray-800"><span class="text-gray-400 block">&amp;gt;</span> &gt;</div>
+                        <div class="p-2 bg-[#12151E] rounded text-center border border-gray-800"><span class="text-gray-400 block">&amp;amp;</span> &amp;</div>
+                        <div class="p-2 bg-[#12151E] rounded text-center border border-gray-800"><span class="text-gray-400 block">&amp;quot;</span> "</div>
+                        <div class="p-2 bg-[#12151E] rounded text-center border border-gray-800"><span class="text-gray-400 block">&amp;copy;</span> &copy;</div>
+                        <div class="p-2 bg-[#12151E] rounded text-center border border-gray-800"><span class="text-gray-400 block">&amp;reg;</span> &reg;</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderAsciiUtility() {
+            const container = document.getElementById('utility-card-container');
+            container.classList.remove('hidden');
+            container.innerHTML = `
+                <div class="bg-ddg-cardDark rounded-2xl border border-purple-500/50 p-5 shadow-xl">
+                    <span class="text-xs font-bold uppercase text-purple-400 block mb-2"><i class="fa-solid fa-table mr-1"></i> ASCII Quick Table</span>
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 font-mono text-xs">
+                        <div class="p-2 bg-[#12151E] rounded border border-gray-800 flex justify-between"><span>A-Z</span><span class="text-gray-400">65 - 90</span></div>
+                        <div class="p-2 bg-[#12151E] rounded border border-gray-800 flex justify-between"><span>a-z</span><span class="text-gray-400">97 - 122</span></div>
+                        <div class="p-2 bg-[#12151E] rounded border border-gray-800 flex justify-between"><span>0-9</span><span class="text-gray-400">48 - 57</span></div>
+                        <div class="p-2 bg-[#12151E] rounded border border-gray-800 flex justify-between"><span>Space</span><span class="text-gray-400">32</span></div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderShortenUtility(url) {
+            const container = document.getElementById('utility-card-container');
+            container.classList.remove('hidden');
+            const mockShort = `https://ddg.gg/s/${Math.random().toString(36).substring(2, 8)}`;
+            container.innerHTML = `
+                <div class="bg-ddg-cardDark rounded-2xl border border-emerald-500/50 p-5 shadow-xl">
+                    <span class="text-xs font-bold uppercase text-emerald-400 block mb-2"><i class="fa-solid fa-link mr-1"></i> Compressed Short URL</span>
+                    <div class="flex items-center space-x-2 bg-[#12151E] p-3 rounded-xl border border-ddg-cardBorder">
+                        <span class="font-mono text-sm font-bold text-white flex-1 truncate">${mockShort}</span>
+                        <button onclick="copyToClipboard('${mockShort}')" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-semibold">Copy</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderMathUtility(expr) {
+            const container = document.getElementById('utility-card-container');
+            container.classList.remove('hidden');
+            let res = 'Invalid Math';
+            try {
+                res = Function(`'use strict'; return (${expr})`)();
+            } catch(e) {}
+            container.innerHTML = `
+                <div class="bg-ddg-cardDark rounded-2xl border border-amber-500/50 p-5 shadow-xl">
+                    <span class="text-xs font-bold uppercase text-amber-400 block mb-2"><i class="fa-solid fa-calculator mr-1"></i> Direct Calculation Result</span>
+                    <div class="flex items-center justify-between bg-[#12151E] p-3 rounded-xl border border-ddg-cardBorder">
+                        <span class="font-mono text-sm text-gray-400">${expr} =</span>
+                        <span class="font-mono text-xl font-bold text-amber-400">${res}</span>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Timer Mechanics
+        let currentSecondsLeft = 0;
+        function formatTimerDisplay(secs) {
+            const m = Math.floor(secs / 60).toString().padStart(2, '0');
+            const s = (secs % 60).toString().padStart(2, '0');
+            return `${m}:${s}`;
+        }
+
+        function startTimer(secs) {
+            if (activeTimerInterval) clearInterval(activeTimerInterval);
+            currentSecondsLeft = secs;
+            const display = document.getElementById('timer-display');
+            
+            activeTimerInterval = setInterval(() => {
+                currentSecondsLeft--;
+                if (display) display.innerText = formatTimerDisplay(currentSecondsLeft);
+                if (currentSecondsLeft <= 0) {
+                    clearInterval(activeTimerInterval);
+                    showToast('Countdown finished!', 'success');
+                }
+            }, 1000);
+        }
+
+        function resetTimer() {
+            if (activeTimerInterval) clearInterval(activeTimerInterval);
+            const display = document.getElementById('timer-display');
+            if (display) display.innerText = '05:00';
+        }
+
+        // Passphrase Generator Utility
+        function generatePassphrase(len) {
+            const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()_+-=';
+            let res = '';
+            for (let i = 0; i < len; i++) {
+                res += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            return res;
+        }
+
+        // Apply Suggestion To Search
+        function applySuggestion(newQuery) {
+            const input = document.getElementById('search-input');
+            input.value = newQuery;
+            handleSearchInput();
+            input.focus();
+            showToast('Applied syntax suggestion!', 'info');
+        }
+
+        function injectSyntax(prefix, val) {
+            const input = document.getElementById('search-input');
+            const current = input.value.trim();
+            if (val) {
+                input.value = `${current} ${prefix}${val}`.trim();
+            } else {
+                input.value = `${current} ${prefix}`.trim();
+            }
+            handleSearchInput();
+            input.focus();
+        }
+
+        function wrapInQuotes() {
+            const input = document.getElementById('search-input');
+            let val = input.value.trim();
+            if (val && !val.startsWith('"')) {
+                input.value = `"${val}"`;
+                handleSearchInput();
+                input.focus();
+            }
+        }
+
+        function applyBang(bang) {
+            const input = document.getElementById('search-input');
+            let current = input.value.trim();
+            if (current.startsWith('!')) {
+                current = current.replace(/^!\S+\s*/, '');
+            }
+            input.value = `${bang} ${current}`.trim();
+            switchTab('assistant');
+            handleSearchInput();
+            input.focus();
+        }
+
+        // Execute DDG Search in New Window
+        function executeDDGSearch() {
+            const query = document.getElementById('search-input').value.trim();
+            if (!query) {
+                showToast('Please enter a query first', 'warning');
+                return;
+            }
+            const url = `https://duckduckgo.com/?q=${encodeURIComponent(query)}`;
+            window.open(url, '_blank');
+        }
+
+        // Query Builder Logic
+        function updateBuiltQuery() {
+            const kw = document.getElementById('builder-keywords').value.trim();
+            const exact = document.getElementById('builder-exact').value.trim();
+            const site = document.getElementById('builder-site').value.trim();
+            const filetype = document.getElementById('builder-filetype').value;
+            const placementType = document.getElementById('builder-placement-type').value;
+            const placementVal = document.getElementById('builder-placement-val').value.trim();
+            const exclude = document.getElementById('builder-exclude').value.trim();
+            const bang = document.getElementById('builder-bang').value;
+
+            const parts = [];
+
+            if (bang) parts.push(bang);
+            if (kw) parts.push(kw);
+            if (exact) parts.push(`"${exact}"`);
+            if (site) parts.push(`site:${site}`);
+            if (filetype) parts.push(`filetype:${filetype}`);
+            if (placementVal) parts.push(`${placementType}${placementVal}`);
+            if (exclude) {
+                exclude.split(' ').forEach(term => {
+                    if (term) parts.push(`-${term}`);
+                });
+            }
+
+            const compiled = parts.join(' ');
+            document.getElementById('builder-output').innerText = compiled || 'Your compiled query will appear here...';
+        }
+
+        function copyBuiltQuery() {
+            const text = document.getElementById('builder-output').innerText;
+            if (text && !text.startsWith('Your compiled')) {
+                copyToClipboard(text);
+            }
+        }
+
+        function sendBuiltToAssistant() {
+            const text = document.getElementById('builder-output').innerText;
+            if (text && !text.startsWith('Your compiled')) {
+                switchTab('assistant');
+                applySuggestion(text);
+            }
+        }
+
+        // Keyboard Shortcut Listener Protocols
+        function setupKeyboardListeners() {
+            document.addEventListener('keydown', (e) => {
+                // Ignore key shortcuts if typing in input fields (except Escape or '/')
+                const activeTag = document.activeElement.tagName;
+                const isInputActive = activeTag === 'INPUT' || activeTag === 'TEXTAREA' || activeTag === 'SELECT';
+
+                // Display pressed key badge in HUD
+                showKeyBadge(e.key);
+
+                if (e.key === '?' && !isInputActive) {
+                    e.preventDefault();
+                    toggleKeyboardHelp();
+                    return;
+                }
+
+                if (e.key === '/' && !isInputActive) {
+                    e.preventDefault();
+                    switchTab('assistant');
+                    document.getElementById('search-input').focus();
+                    return;
+                }
+
+                if (!isInputActive) {
+                    if (e.key.toLowerCase() === 'j') {
+                        // Navigate down in suggestions
+                        e.preventDefault();
+                        navigateSuggestions(1);
+                    } else if (e.key.toLowerCase() === 'k') {
+                        // Navigate up in suggestions
+                        e.preventDefault();
+                        navigateSuggestions(-1);
+                    } else if (e.key.toLowerCase() === 'd') {
+                        // Domain search shortcut
+                        e.preventDefault();
+                        injectSyntax('site:', 'wikipedia.org');
+                    } else if (e.key.toLowerCase() === 'm') {
+                        // Snap to main tab
+                        e.preventDefault();
+                        switchTab('assistant');
+                    } else if (e.key.toLowerCase() === 't') {
+                        // Scroll top
+                        e.preventDefault();
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }
+                }
+            });
+        }
+
+        function handleSearchKeyDown(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                if (selectedSuggestionIndex >= 0) {
+                    const selected = document.getElementById(`suggestion-item-${selectedSuggestionIndex}`);
+                    if (selected) selected.click();
+                } else {
+                    executeDDGSearch();
+                }
+            }
+        }
+
+        function navigateSuggestions(direction) {
+            const container = document.getElementById('suggestions-list');
+            const items = container.querySelectorAll('[id^="suggestion-item-"]');
+            if (items.length === 0) return;
+
+            if (selectedSuggestionIndex >= 0 && items[selectedSuggestionIndex]) {
+                items[selectedSuggestionIndex].classList.remove('ring-2', 'ring-ddg-orange', 'bg-gray-800');
+            }
+
+            selectedSuggestionIndex += direction;
+            if (selectedSuggestionIndex >= items.length) selectedSuggestionIndex = 0;
+            if (selectedSuggestionIndex < 0) selectedSuggestionIndex = items.length - 1;
+
+            const current = items[selectedSuggestionIndex];
+            if (current) {
+                current.classList.add('ring-2', 'ring-ddg-orange', 'bg-gray-800');
+                current.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+            }
+        }
+
+        // Toggle Keyboard Shortcuts Modal
+        function toggleKeyboardHelp() {
+            const modal = document.getElementById('keyboard-modal');
+            modal.classList.toggle('hidden');
+        }
+
+        function showKeyBadge(key) {
+            const badge = document.getElementById('active-key-badge');
+            const keyElem = document.getElementById('last-key');
+            keyElem.innerText = key === ' ' ? 'Space' : key;
+            badge.classList.remove('hidden');
+            setTimeout(() => {
+                badge.classList.add('hidden');
+            }, 1200);
+        }
+
+        // Helper Detector Pill Activators
+        function resetDetectorTags() {
+            ['tag-quote', 'tag-boolean', 'tag-filter', 'tag-bang', 'tag-utility'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.className = 'px-2 py-0.5 rounded-md bg-gray-800/60 border border-gray-700/50 text-gray-500';
+                }
+            });
+        }
+
+        function activateTag(id) {
+            const el = document.getElementById(id);
+            if (el) {
+                el.className = 'px-2 py-0.5 rounded-md bg-ddg-orange/20 border border-ddg-orange/40 text-ddg-orange font-semibold';
+            }
+        }
+
+        // Copy to Clipboard Utility
+        function copyToClipboard(text) {
+            const textArea = document.createElement("textarea");
+            textArea.value = text;
+            document.body.appendChild(textArea);
+            textArea.select();
+            try {
+                document.execCommand('copy');
+                showToast('Copied to clipboard!', 'success');
+            } catch (err) {
+                showToast('Failed to copy', 'error');
+            }
+            document.body.removeChild(textArea);
+        }
+
+        // Toast Notification System
+        function showToast(msg, type = 'info') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            
+            let bg = 'bg-gray-800 border-gray-700 text-white';
+            if (type === 'success') bg = 'bg-emerald-950/90 border-emerald-600/50 text-emerald-200';
+            if (type === 'warning') bg = 'bg-amber-950/90 border-amber-600/50 text-amber-200';
+            if (type === 'error') bg = 'bg-red-950/90 border-red-600/50 text-red-200';
+
+            toast.className = `pointer-events-auto px-4 py-2.5 rounded-xl border text-xs font-semibold shadow-2xl flex items-center space-x-2 transition-all transform translate-y-2 opacity-0 ${bg}`;
+            toast.innerHTML = `<i class="fa-solid fa-circle-info"></i><span>${msg}</span>`;
+
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.classList.remove('translate-y-2', 'opacity-0');
+            }, 10);
+
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-2');
+                setTimeout(() => toast.remove(), 300);
+            }, 2500);
+        }
+
+        function escapeQuotes(str) {
+            return str.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+        }
+    </script>
+</body>
+</html>
